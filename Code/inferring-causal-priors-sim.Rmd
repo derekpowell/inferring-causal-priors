@@ -1,0 +1,168 @@
+---
+title: "Causal Prior Recovery"
+output: html_notebook
+---
+
+__NOTE:__ picking this back up 5/25/18, 11:31 AM
+
+In this notebook I'll simulate some causal power estimates for different contingency data. Then I'll feed that data into my causal priors BDA program and we'll see how well it can recover the true parameters.
+
+# Simulate data under different priors
+
+Here we'll do inference with rejection sampling to end up with 1000 simulated responses.
+
+```{r}
+library(rwebppl)
+library(tidyverse)
+
+# 12/14/17, 4:43 PM: got this working 
+# needed to grab first index of data input as a list -- dataFromR[0]
+
+conts <- data.frame(Ctrials=10,
+                    notCtrials=10,
+                    e_C=8,
+                    eGivenNotC=2)
+
+modelFile = "webppl/causalLearner.wppl"  # "causalLearner.wppl"
+resps <- webppl(program_file = modelFile,
+              packages = c("node_modules/discretizedBeta"),
+              data=conts,
+              data_var="dataFromR")
+
+resps %>% as_tibble() %>% head()
+
+```
+
+We can plot these to see the posterior on cause B and C.
+
+```{r, fig.asp=1}
+# created this 12/14/17, 3:58 PM
+resps %>% 
+  spread(Parameter, value) %>%
+  mutate(B=as.factor(B),
+         C=as.factor(C)) %>%
+  # group_by(Parameter, value) %>%
+  # summarize(prob = n()/1000)
+  ggplot(aes(x=B, y=C)) + 
+  geom_bin2d() +
+  theme(aspect.ratio=1)
+# hist(respSample$value)
+```
+
+So now let's wrap that up in a function to simulate data (this is kind of ugly but it works ok).
+
+```{r}
+
+# # peek at some distributions ...
+# plot(seq(0,1,.01), dbeta(seq(0,1,.01), 2, 5), type = "l")
+
+cond_data <- data.frame(
+  contingency = c("weak", "strong", "weak", "strong"),
+  mechanism = c("direct", "direct", "indirect", "indirect"),
+  Ctrials = c(10,10,10,10),
+  notCtrials = c(10,10,10,10),
+  e_C = c(4, 9, 4, 9),
+  e_notC = c(2,2,2,2)
+) %>%
+  mutate(
+    a_prior = if_else(mechanism=="direct", 5, 2),
+    b_prior = if_else(mechanism=="direct", 2, 5)
+    )
+
+simulate_causal_reasoners <- function(data) {
+  resps <- webppl(program_file = "webppl/causalLearner-func.wppl",
+                packages = c("node_modules/discretizedBeta"),
+                data=data,
+                data_var="dataFromR") %>%
+    select(Iteration, Parameter, value) %>% 
+    mutate(
+      contingency = data$contingency,
+      mechanism = data$mechanism,
+      a_prior = data$a_prior,
+      b_prior = data$b_prior,
+      Ctrials = data$Ctrials,
+      notCtrials = data$notCtrials,
+      e_C = data$e_C,
+      e_notC = data$e_notC
+    ) %>%
+    rename(response = value) %>%
+    filter(Iteration %in% 1:50)
+}
+
+simulated_data = NULL
+
+for (i in 1:nrow(cond_data)) {
+  
+  rowres <- simulate_causal_reasoners(cond_data[i,])
+  if (is.null(simulated_data)){
+    simulated_data <- rowres
+  } else {
+    simulated_data <- bind_rows(simulated_data, rowres)
+  }
+}
+```
+
+So now we have some simulated data. Let's check it out descriptively.
+
+```{r}
+simulated_data %>%
+  filter(Parameter == "C") %>%
+  ggplot(aes(y = response, x = contingency, fill = mechanism, color = mechanism)) +
+  geom_dotplot(binaxis = "y", stackdir = "center", position = "dodge", alpha=.5, binwidth=.20) +
+  theme_bw()
+```
+
+Ok, quite clearly we're getting a substantial effect of priors ("mechanism"), and an effect of contingency as well.
+
+```{r}
+modelFile <- "webppl/causalPriorModelBDA-conts.wppl"
+
+
+input_data <- simulated_data %>%
+  filter(Parameter == "C") 
+
+result_direct <- webppl(
+  program_file = modelFile,
+  packages = c("node_modules/discretizedBeta"),
+  data = input_data %>%
+    filter(mechanism=="direct"),
+  data_var = "cmechData",
+  inference_opts = list(method = "MCMC",
+                        samples = 500,
+                        burn = 100),
+  model_var = "bdaModel"
+) # using 500 mcmc samples ... (takes like 5 min?)
+
+result_indirect <- webppl(
+  program_file = modelFile,
+  packages = c("node_modules/discretizedBeta"),
+  data = input_data %>%
+    filter(mechanism=="indirect"),
+  data_var = "cmechData",
+  inference_opts = list(method = "MCMC",
+                        samples = 500,
+                        burn = 100),
+  model_var = "bdaModel"
+)
+
+```
+
+
+```{r}
+result_direct %>% filter(Parameter=="prior_a") %>% .$value %>% summary()
+result_direct %>% filter(Parameter=="prior_b") %>% .$value %>% summary()
+
+result_indirect %>% filter(Parameter=="prior_a") %>% .$value %>% summary()
+result_indirect %>% filter(Parameter=="prior_b") %>% .$value %>% summary()
+
+```
+
+We recover the priors pretty damn well! Recall, they were Beta(5, 2), and Beta(2, 5). And this is from (relatively) little data (of course they are very strong priors).
+
+```{r}
+plot(seq(0,1,.01), dbeta(seq(0,1,.01), 5.665, 2.93), type = "l")
+title("Direct Mechanism: avg prior")
+plot(seq(0,1,.01), dbeta(seq(0,1,.01), 2.36, 5.625), type = "l")
+title("Indirect Mechanism: avg prior")
+```
+

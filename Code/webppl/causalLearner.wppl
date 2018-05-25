@@ -1,0 +1,35 @@
+
+var contingencies = dataFromR[0]
+
+// noisy-or function for counts of occurrences;
+var noisy_or = function(params) {
+    var b = binomial({n:params.n, p:params.bP});
+    var c = b < params.n
+        ? binomial({n:params.n, p:params.cP})
+        : 0;
+
+    return b + c;
+};
+
+// a model for causal inference
+var observerModel = function(priors){
+  Infer({
+    method:"rejection", samples:500, // changed to "enumerate"
+
+    model: function() { 
+      var cPower = sample(priors)   
+      var bPower = uniform({a:0,b:1})
+      var causeModel = binomial({n:10, p:cPower+bPower-cPower*bPower})
+      var backgroundModel = binomial({n:10, p:bPower})
+    
+      condition(backgroundModel==contingencies.eGivenNotC)
+      condition(causeModel==contingencies.eGivenC)  
+      var cGuess = binomial({n:10,p:cPower})
+      var bGuess = binomial({n:10,p:bPower})
+      return {C: cGuess, B: bGuess}
+      }
+    }
+  )
+}
+
+observerModel(Beta({a:3,b:3}))

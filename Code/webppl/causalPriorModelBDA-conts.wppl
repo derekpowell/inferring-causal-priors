@@ -1,0 +1,99 @@
+// this works! 5/25/18, 2:16 PM
+
+// MH's helpers from tugofwar model
+
+var levels = function(a, lvl){ return _.uniq(_.map(a, lvl)) }
+
+var contingency_conditions = levels(cmechData, "contingency");
+var mechanism_conditions = levels(cmechData, "mechanism");
+
+// a model for observers doing causal inference
+var observerModel = function(priors, conts){ // make this also take contingencies
+  Infer({
+    method:"enumerate", // changed to "enumerate"
+
+    model: function() { 
+      var cPower = sample(priors)
+      var bPower = sample(DiscretizedUniform())
+      var causeModel = binomial({n:conts.Ctrials, p:cPower+bPower-cPower*bPower})
+      var backgroundModel = binomial({n:conts.notCtrials, p:bPower})
+    
+      condition(backgroundModel==conts.e_notC)
+      condition(causeModel==conts.e_C)  
+      var cGuess = binomial({n:10, p:cPower})
+    
+      return cGuess
+      }
+    }
+  )
+}
+
+// A bayesian data analysis (BDA) model (bayes in the notebook)
+var bdaModel = function() {
+  
+//   set our prior over observers' priors
+//   here assuming prior is a beta distribution with unknown parameters
+//   specifying the prior over mode and sample size (k) rather than a,b
+  // var mode = uniform(0,1);
+  // var k = 5; // uniform(2,20)
+  // var a = mode * (k-2) + 1;
+  // var b = (1-mode) *(k-2) + 1;
+
+  // Actually, here I'll do it in terms of a,b for early testing purposes
+  var a = sample(DiscretizedUniform())*50 // 10
+  var b = sample(DiscretizedUniform())*50 // 10
+  var priors = DiscretizedBeta({a:a, b:b});
+
+//   2. do predictions, map observed responses (following tow model)
+
+  var predictions = map(function(contingency){
+    return(map(function(mechanism){
+
+      // get data for each condition
+
+      var condInfo = {
+        contingency: contingency,
+        mechanism: mechanism
+      }
+
+      var condData = _.filter(cmechData, condInfo)
+
+      // get observer's observed contingencies for each condition
+      var contingencies = {
+        Ctrials: condData[0].Ctrials,
+        notCtrials: condData[0].notCtrials,
+        e_C: condData[0].e_C,
+        e_notC: condData[0].e_notC
+      }
+
+      var modelPosterior = observerModel(priors, contingencies);
+
+      // map Ps responses to do BDA
+
+      map(
+        function(d){
+          observe(modelPosterior, d.response)
+        }, 
+        condData);
+
+      // return avg predicted resp for each cond)
+      return _.fromPairs([[contingency + "_" + mechanism, expectation(modelPosterior)]])
+
+    }, mechanism_conditions))
+  }, contingency_conditions) 
+
+  // TO DO: add code to return avg predicted responses
+
+  //   4. return prior parameters (and add predicted values too?)
+  // return {prior_a:a,prior_b:b, mode:mode, k:k}; // alternate parameterization
+  return {prior_a:a,prior_b:b};
+
+};
+
+// Do this in R now
+// var BDAposterior = Infer({method:"MCMC",
+//                           samples:500,
+//                           burn:100}, bdaModel);
+
+
+// BDAposterior
