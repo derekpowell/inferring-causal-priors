@@ -1,11 +1,15 @@
 ---
 title: "Causal Prior Recovery"
+author: Derek Powell
+date: May 26, 2018
 output: html_notebook
 ---
 
-__NOTE:__ picking this back up 5/25/18, 11:31 AM
+Researchers studying causal learning most commonly examine how people learn causal relationships from observing covarations among events. This has borne a lot of fruit and touched on some deep philosophical issues about the nature of causality (e.g., it's all in our heads!). However, little of the causal knowledge that most people actually possess is achieved in this way. Instead, most of our causal knowledge comes from what others tell us about the world. Of course, people rarely convey causal information like, "the causal power of aspirin to reduce headaches is .25." Instead, we communicate more vague information, like "aspirin helps with headaches." Moreover, we communicate and possess even more abstract understandings of how different types of causal entities interact and how different different causal mechanisms operate, that let us draw inferences about specific causal relationships from generalities. How do these forms of knowledge interact in our causal inferences?
 
-In this notebook I'll simulate some causal power estimates for different contingency data. Then I'll feed that data into my causal priors BDA program and we'll see how well it can recover the true parameters.
+This is a preliminary exploration for a project I'm considering that would examine how mechanistic understandings or explanations might shape people's priors about causal relationships. The idea is that our abstract understanding of causal mechanisms could be expressed as different priors about the possible strengths of causal relationships. Given different cover stories suggesting different potential mechanisms, we should expect different kinds of observations. With that, the idea is to use [webppl](http://webppl.org) to combine _bayesian cognitive modeling_ and _bayesian data analysis_ to infer causal learner's domain-specific priors based on their responses in a causal learning task. This would begin to suggest ways in which we might connect these two forms of causal knowledge. 
+
+This notebook is a preliminary proof-of-concept test to see whether this kind of approach could work. In this notebook, I'll simulate some causal power estimates with a model of a causal learner. I'll simualte data for two different sets of contingency data and with priors for two different contexts. Then, I'll do bayesian data analysis over the bayesian cognitive model and we'll see how well we can recover the original parameters.
 
 ```{r}
 # load packages
@@ -15,7 +19,18 @@ library(tidyverse)
 
 # Simulate Responses
 
-As an example, here I sample the posterior over expected occurrences of some effect given causes B and C. That is, sampling  a causal learner with the prior $Beta(3,3)$.  Here we'll do inference with rejection sampling to end up with 1000 simulated responses.
+As an example, here I sample the posterior over expected occurrences of some effect E, given cause C and background causes B, after learning the contingency data below:
+
+|           | B present, C absent | B present , C present |
+| --------- | ------ | ------ |
+| E present | 2      | 8      |
+| E absent  | 8      | 2      |
+ 
+Here I assume the causal learner has prior $Beta(3,3)$ over the causal strength of cause C, and uniform prior over causal strength of background causes.  I'm simulating participants responses to the counterfactual causal strength questions:
+
+> "Suppose cause [B/C] occurred alone 10 separate times, how many times would we observe the effect?"
+
+To get samplse, I do inference on the learner using rejection sampling to end up with 1000 simulated responses. Dividing the response by 10 approximates the causal strength judgment. Here's a heatmap of the posterior causal powers of causes B and C.
 
 ```{r}
 conts <- data.frame(
@@ -45,9 +60,7 @@ resp_posterior %>%
 
 ```
 
-So now let's wrap that up in a function to simulate data (this is kind of ugly but it works ok). Here I simulate data for a "direct" mechanism and an "indirect" mechanism. For instance, rash caused by a cream (direct) versus rash caused by a pill (indirect). I imagine priors for these two approaches can be represented as $Beta(2,5)$ and $Beta(5,2)$. 
-
-Here's are two plots that illustrate these priors
+Now I'll simulate data, that is, participants responses, after learning about a "direct" mechanism and an "indirect" mechanism. For instance, a rash caused by a cream (direct) versus rash caused by a pill (indirect). Before seeing any contingency data, people probably have different expectations about the likely strength of those causal relationships (i.e., cream -> rash vs. pill -> rash). I'll imagine people's priors for these two specific causal relations are $Beta(2,5)$ and $Beta(5,2)$. 
 
 ```{r}
 
@@ -57,12 +70,10 @@ plot(seq(0,1,.01), dbeta(seq(0,1,.01), 2.36, 5.625), type = "l")
 title("Indirect Mechanism")
 ```
 
+I'll simulate data for four conditions, two contingency conditions (strong vs weak) where the power of cause C is manipulated, and two mechanism condiitons, where the priors are manipulated. In the experiment, this corresponds to the different cover stories. I'm simulating data for 50 Ps per condition (_n_ = 200 total).
 
 ```{r}
-
-# # peek at some distributions ...
-# plot(seq(0,1,.01), dbeta(seq(0,1,.01), 2, 5), type = "l")
-
+# this is all pretty ugly but it works
 cond_data <- data.frame(
   contingency = c("weak", "strong", "weak", "strong"),
   mechanism = c("direct", "direct", "indirect", "indirect"),
@@ -160,12 +171,6 @@ result_indirect <- webppl(
 
 
 ```{r}
-# result_direct %>% filter(Parameter=="prior_a") %>% .$value %>% summary()
-# result_direct %>% filter(Parameter=="prior_b") %>% .$value %>% summary()
-# 
-# result_indirect %>% filter(Parameter=="prior_a") %>% .$value %>% summary()
-# result_indirect %>% filter(Parameter=="prior_b") %>% .$value %>% summary()
-
 result_direct %>%
   mutate(mechanism = "direct") %>%
   bind_rows(result_indirect %>% mutate(mechanism="indirect")) %>%
@@ -175,7 +180,7 @@ result_direct %>%
             b_mean = mean(prior_b))
 ```
 
-We recover the parameters pretty well! Recall, they were $Beta(5, 2)$, and $Beta(2, 5)$. And this is from not all that much data (n = 200).
+We recover the parameters pretty well! Recall, they were $Beta(5, 2)$, and $Beta(2, 5)$. And this is from not all that much data (_n_ = 200).
 
 We can also take a peek at the posterior distributions of both parameters, across the two mechanism conditions.
 
@@ -185,7 +190,7 @@ result_direct %>%
   bind_rows(result_indirect %>% mutate(mechanism="indirect")) %>%
   spread(Parameter, value) %>%
   ggplot(aes(x = prior_a, y = prior_b)) +
-  geom_bin2d(bins=20) +
+  geom_hex(bins=20) + # or geom_bin2d() 
   facet_wrap(~mechanism, scales="fixed") +
   # geom_jitter(aes(color = mechanism), width = .1, height=.1, alpha=.33) + # alternate plotting approach
   coord_cartesian(xlim = c(1,10), ylim = c(1,10)) +
@@ -194,8 +199,11 @@ result_direct %>%
   labs(title = "Posterior distribution of causal prior parameters (beta)")
 ```
 
+This is exciting and suggests this idea might be feasible and informative. Here I'll throw a bit of water on things, and make a note that another, simpler approach would be to use something like a binned histogram task, ([see Franke et al., 2017 for an exploration](http://www.sfs.uni-tuebingen.de/~mfranke/Papers/FrankeDablander_2016_What_does_the_crowd_believe.pdf)), to directly ask people about their expectations, and then use those priors in a causal learning model to predict participants' responses. However, these are probably complementary techniques, and it's certainly cooler to use bayesian data analysis to uncover the priors inside the task.
+
 __To do list ... __
 
+* add mcmc diagnostics (trace plots, etc)
 * add cause B responses to BDA model
 * return avg condition predicted responses
 * do both mechanism conditions in one go (separate sets of prior parameters)

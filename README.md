@@ -4,9 +4,4 @@ This is a repo for (preliminary) work examining how mechanistic understandings o
 
 ###  Some notes ...
 
-Requires a `jStat` package be installed into a `node_modules` folder. Also requires a webppl package in there with `discretizedBeta()` function. 
-
-
-Some stray thoughts ...
-
-Might also consider using a "binned histogram" task to elicit priors, and/or compare the results of the two methods 
+Requires a `jStat` package (v 1.7 or above). From inside project folder, install with `npm install jStat`. Also requires the webppl package  `discretizedBeta` included in the repo. 
