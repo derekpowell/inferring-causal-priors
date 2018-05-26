@@ -31,17 +31,24 @@ var observerModel = function(priors, conts){ // make this also take contingencie
 // A bayesian data analysis (BDA) model (bayes in the notebook)
 var bdaModel = function() {
   
-//   set our prior over observers' priors
-//   here assuming prior is a beta distribution with unknown parameters
-//   specifying the prior over mode and sample size (k) rather than a,b
+  //   set our prior over observers' priors
+  //   here assuming prior is a beta distribution with unknown parameters
+  
+  //   specifying the prior over mode and sample size (k) rather than a,b
   // var mode = uniform(0,1);
-  // var k = 5; // uniform(2,20)
+  // var k = uniform(2,20)
   // var a = mode * (k-2) + 1;
   // var b = (1-mode) *(k-2) + 1;
 
-  // Actually, here I'll do it in terms of a,b for early testing purposes
-  var a = sample(DiscretizedUniform())*50 // 10
-  var b = sample(DiscretizedUniform())*50 // 10
+  // can also do things directly in terms of a and b
+  
+  var a = uniform(1, 10) // 10
+  var b = uniform(1, 10) // 10
+
+  // can use discretized versions + enumeration
+  // var a = sample(DiscretizedUniform())*10 // 10
+  // var b = sample(DiscretizedUniform())*10 // 10
+  
   var priors = DiscretizedBeta({a:a, b:b});
 
 //   2. do predictions, map observed responses (following tow model)

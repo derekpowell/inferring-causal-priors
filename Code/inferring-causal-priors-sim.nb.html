@@ -286,13 +286,10 @@ for (i in 1:nrow(cond_data)) {
 <p>Ok, quite clearly we’re getting a substantial effect of priors (“mechanism”), and an effect of contingency as well.</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubW9kZWxGaWxlIDwtIFwid2VicHBsL2NhdXNhbFByaW9yTW9kZWxCREEtY29udHMud3BwbFwiXG5cblxuaW5wdXRfZGF0YSA8LSBzaW11bGF0ZWRfZGF0YSAlPiVcbiAgZmlsdGVyKFBhcmFtZXRlciA9PSBcIkNcIikgXG5cbnJlc3VsdF9kaXJlY3QgPC0gd2VicHBsKFxuICBwcm9ncmFtX2ZpbGUgPSBtb2RlbEZpbGUsXG4gIHBhY2thZ2VzID0gYyhcIm5vZGVfbW9kdWxlcy9kaXNjcmV0aXplZEJldGFcIiksXG4gIGRhdGEgPSBpbnB1dF9kYXRhICU+JVxuICAgIGZpbHRlcihtZWNoYW5pc209PVwiZGlyZWN0XCIpLFxuICBkYXRhX3ZhciA9IFwiY21lY2hEYXRhXCIsXG4gIGluZmVyZW5jZV9vcHRzID0gbGlzdChtZXRob2QgPSBcIk1DTUNcIixcbiAgICAgICAgICAgICAgICAgICAgICAgIHNhbXBsZXMgPSA1MDAsXG4gICAgICAgICAgICAgICAgICAgICAgICBidXJuID0gMTAwKSxcbiAgbW9kZWxfdmFyID0gXCJiZGFNb2RlbFwiXG4pICMgdXNpbmcgNTAwIG1jbWMgc2FtcGxlcyAuLi4gKHRha2VzIGxpa2UgNSBtaW4/KVxuXG5yZXN1bHRfaW5kaXJlY3QgPC0gd2VicHBsKFxuICBwcm9ncmFtX2ZpbGUgPSBtb2RlbEZpbGUsXG4gIHBhY2thZ2VzID0gYyhcIm5vZGVfbW9kdWxlcy9kaXNjcmV0aXplZEJldGFcIiksXG4gIGRhdGEgPSBpbnB1dF9kYXRhICU+JVxuICAgIGZpbHRlcihtZWNoYW5pc209PVwiaW5kaXJlY3RcIiksXG4gIGRhdGFfdmFyID0gXCJjbWVjaERhdGFcIixcbiAgaW5mZXJlbmNlX29wdHMgPSBsaXN0KG1ldGhvZCA9IFwiTUNNQ1wiLFxuICAgICAgICAgICAgICAgICAgICAgICAgc2FtcGxlcyA9IDUwMCxcbiAgICAgICAgICAgICAgICAgICAgICAgIGJ1cm4gPSAxMDApLFxuICBtb2RlbF92YXIgPSBcImJkYU1vZGVsXCJcbilcblxuYGBgIn0= -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubW9kZWxGaWxlIDwtIFwid2VicHBsL2NhdXNhbFByaW9yTW9kZWxCREEtY29udHMud3BwbFwiXG5pbnB1dF9kYXRhIDwtIHNpbXVsYXRlZF9kYXRhICU+JVxuICBmaWx0ZXIoUGFyYW1ldGVyID09IFwiQ1wiKSBcbnJlc3VsdF9kaXJlY3QgPC0gd2VicHBsKFxuICBwcm9ncmFtX2ZpbGUgPSBtb2RlbEZpbGUsXG4gIHBhY2thZ2VzID0gYyhcIm5vZGVfbW9kdWxlcy9kaXNjcmV0aXplZEJldGFcIiksXG4gIGRhdGEgPSBpbnB1dF9kYXRhICU+JVxuICAgIGZpbHRlcihtZWNoYW5pc209PVwiZGlyZWN0XCIpLFxuICBkYXRhX3ZhciA9IFwiY21lY2hEYXRhXCIsXG4gIGluZmVyZW5jZV9vcHRzID0gbGlzdChtZXRob2QgPSBcIk1DTUNcIixcbiAgICAgICAgICAgICAgICAgICAgICAgIHNhbXBsZXMgPSA1MDAsXG4gICAgICAgICAgICAgICAgICAgICAgICBidXJuID0gMTAwKSxcbiAgbW9kZWxfdmFyID0gXCJiZGFNb2RlbFwiXG4pICMgdXNpbmcgNTAwIG1jbWMgc2FtcGxlcyAuLi4gKHRha2VzIGxpa2UgNSBtaW4/KVxucmVzdWx0X2luZGlyZWN0IDwtIHdlYnBwbChcbiAgcHJvZ3JhbV9maWxlID0gbW9kZWxGaWxlLFxuICBwYWNrYWdlcyA9IGMoXCJub2RlX21vZHVsZXMvZGlzY3JldGl6ZWRCZXRhXCIpLFxuICBkYXRhID0gaW5wdXRfZGF0YSAlPiVcbiAgICBmaWx0ZXIobWVjaGFuaXNtPT1cImluZGlyZWN0XCIpLFxuICBkYXRhX3ZhciA9IFwiY21lY2hEYXRhXCIsXG4gIGluZmVyZW5jZV9vcHRzID0gbGlzdChtZXRob2QgPSBcIk1DTUNcIixcbiAgICAgICAgICAgICAgICAgICAgICAgIHNhbXBsZXMgPSA1MDAsXG4gICAgICAgICAgICAgICAgICAgICAgICBidXJuID0gMTAwKSxcbiAgbW9kZWxfdmFyID0gXCJiZGFNb2RlbFwiXG4pXG5gYGAifQ== -->
 <pre class="r"><code>modelFile &lt;- &quot;webppl/causalPriorModelBDA-conts.wppl&quot;
-
-
 input_data &lt;- simulated_data %&gt;%
   filter(Parameter == &quot;C&quot;) 
-
 result_direct &lt;- webppl(
   program_file = modelFile,
   packages = c(&quot;node_modules/discretizedBeta&quot;),
@@ -304,7 +301,6 @@ result_direct &lt;- webppl(
                         burn = 100),
   model_var = &quot;bdaModel&quot;
 ) # using 500 mcmc samples ... (takes like 5 min?)
-
 result_indirect &lt;- webppl(
   program_file = modelFile,
   packages = c(&quot;node_modules/discretizedBeta&quot;),
@@ -315,21 +311,40 @@ result_indirect &lt;- webppl(
                         samples = 500,
                         burn = 100),
   model_var = &quot;bdaModel&quot;
-)
-</code></pre>
+)</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucmVzdWx0X2RpcmVjdCAlPiUgZmlsdGVyKFBhcmFtZXRlcj09XCJwcmlvcl9hXCIpICU+JSAuJHZhbHVlICU+JSBzdW1tYXJ5KClcbnJlc3VsdF9kaXJlY3QgJT4lIGZpbHRlcihQYXJhbWV0ZXI9PVwicHJpb3JfYlwiKSAlPiUgLiR2YWx1ZSAlPiUgc3VtbWFyeSgpXG5cbnJlc3VsdF9pbmRpcmVjdCAlPiUgZmlsdGVyKFBhcmFtZXRlcj09XCJwcmlvcl9hXCIpICU+JSAuJHZhbHVlICU+JSBzdW1tYXJ5KClcbnJlc3VsdF9pbmRpcmVjdCAlPiUgZmlsdGVyKFBhcmFtZXRlcj09XCJwcmlvcl9iXCIpICU+JSAuJHZhbHVlICU+JSBzdW1tYXJ5KClcblxuYGBgIn0= -->
-<pre class="r"><code>result_direct %&gt;% filter(Parameter==&quot;prior_a&quot;) %&gt;% .$value %&gt;% summary()
-result_direct %&gt;% filter(Parameter==&quot;prior_b&quot;) %&gt;% .$value %&gt;% summary()
-
-result_indirect %&gt;% filter(Parameter==&quot;prior_a&quot;) %&gt;% .$value %&gt;% summary()
-result_indirect %&gt;% filter(Parameter==&quot;prior_b&quot;) %&gt;% .$value %&gt;% summary()
-</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucmVzdWx0X2RpcmVjdCAlPiUgZmlsdGVyKFBhcmFtZXRlcj09XCJwcmlvcl9hXCIpICU+JSAuJHZhbHVlICU+JSBzdW1tYXJ5KClcbmBgYCJ9 -->
+<pre class="r"><code>result_direct %&gt;% filter(Parameter==&quot;prior_a&quot;) %&gt;% .$value %&gt;% summary()</code></pre>
 <!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiICAgTWluLiAxc3QgUXUuICBNZWRpYW4gICAgTWVhbiAzcmQgUXUuICAgIE1heC4gXG4gIDIuMDM2ICAgMy40MjYgICAzLjk2NiAgIDMuOTcyICAgNC41MTcgICA1LjkwNSBcbiJ9 -->
+<pre><code>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  2.036   3.426   3.966   3.972   4.517   5.905 </code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucmVzdWx0X2RpcmVjdCAlPiUgZmlsdGVyKFBhcmFtZXRlcj09XCJwcmlvcl9iXCIpICU+JSAuJHZhbHVlICU+JSBzdW1tYXJ5KClcbmBgYCJ9 -->
+<pre class="r"><code>result_direct %&gt;% filter(Parameter==&quot;prior_b&quot;) %&gt;% .$value %&gt;% summary()</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiICAgTWluLiAxc3QgUXUuICBNZWRpYW4gICAgTWVhbiAzcmQgUXUuICAgIE1heC4gXG4gIDEuMDM0ICAgMS40MTMgICAxLjg4NyAgIDEuODE0ICAgMi4wNzMgICAyLjkzMSBcbiJ9 -->
+<pre><code>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  1.034   1.413   1.887   1.814   2.073   2.931 </code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucmVzdWx0X2luZGlyZWN0ICU+JSBmaWx0ZXIoUGFyYW1ldGVyPT1cInByaW9yX2FcIikgJT4lIC4kdmFsdWUgJT4lIHN1bW1hcnkoKVxuYGBgIn0= -->
+<pre class="r"><code>result_indirect %&gt;% filter(Parameter==&quot;prior_a&quot;) %&gt;% .$value %&gt;% summary()</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiICAgTWluLiAxc3QgUXUuICBNZWRpYW4gICAgTWVhbiAzcmQgUXUuICAgIE1heC4gXG4gIDEuNTI0ICAgMi4yNjAgICAyLjQ5MyAgIDIuNjM4ICAgMi45OTUgICAzLjM5MiBcbiJ9 -->
+<pre><code>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  1.524   2.260   2.493   2.638   2.995   3.392 </code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucmVzdWx0X2luZGlyZWN0ICU+JSBmaWx0ZXIoUGFyYW1ldGVyPT1cInByaW9yX2JcIikgJT4lIC4kdmFsdWUgJT4lIHN1bW1hcnkoKVxuYGBgIn0= -->
+<pre class="r"><code>result_indirect %&gt;% filter(Parameter==&quot;prior_b&quot;) %&gt;% .$value %&gt;% summary()</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiICAgTWluLiAxc3QgUXUuICBNZWRpYW4gICAgTWVhbiAzcmQgUXUuICAgIE1heC4gXG4gIDQuMDIyICAgNS41MjIgICA2LjA1OSAgIDYuMjQ5ICAgNy4wMzIgICA5LjMxOSBcbiJ9 -->
+<pre><code>   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  4.022   5.522   6.059   6.249   7.032   9.319 </code></pre>
+<!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <p>We recover the priors pretty damn well! Recall, they were Beta(5, 2), and Beta(2, 5). And this is from (relatively) little data (of course they are very strong priors).</p>
