@@ -14,7 +14,7 @@ var noisy_or = function(params) {
 // a model for causal inference
 var observerModel = function(priors){
   Infer({
-    method:"rejection", samples:500, // changed to "enumerate"
+    method:"rejection", samples:1000, // changed to "enumerate"
 
     model: function() { 
       var cPower = sample(priors)   
@@ -22,8 +22,8 @@ var observerModel = function(priors){
       var causeModel = binomial({n:10, p:cPower+bPower-cPower*bPower})
       var backgroundModel = binomial({n:10, p:bPower})
     
-      condition(backgroundModel==contingencies.eGivenNotC)
-      condition(causeModel==contingencies.eGivenC)  
+      condition(backgroundModel==contingencies.e_notC)
+      condition(causeModel==contingencies.e_C)  
       var cGuess = binomial({n:10,p:cPower})
       var bGuess = binomial({n:10,p:bPower})
       return {C: cGuess, B: bGuess}

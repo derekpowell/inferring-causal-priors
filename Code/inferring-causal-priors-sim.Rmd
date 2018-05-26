@@ -7,49 +7,56 @@ __NOTE:__ picking this back up 5/25/18, 11:31 AM
 
 In this notebook I'll simulate some causal power estimates for different contingency data. Then I'll feed that data into my causal priors BDA program and we'll see how well it can recover the true parameters.
 
-# Simulate data under different priors
-
-Here we'll do inference with rejection sampling to end up with 1000 simulated responses.
-
 ```{r}
+# load packages
 library(rwebppl)
 library(tidyverse)
-
-# 12/14/17, 4:43 PM: got this working 
-# needed to grab first index of data input as a list -- dataFromR[0]
-
-conts <- data.frame(Ctrials=10,
-                    notCtrials=10,
-                    e_C=8,
-                    eGivenNotC=2)
-
-modelFile = "webppl/causalLearner.wppl"  # "causalLearner.wppl"
-resps <- webppl(program_file = modelFile,
-              packages = c("node_modules/discretizedBeta"),
-              data=conts,
-              data_var="dataFromR")
-
-resps %>% as_tibble() %>% head()
-
 ```
 
-We can plot these to see the posterior on cause B and C.
+# Simulate Responses
 
-```{r, fig.asp=1}
-# created this 12/14/17, 3:58 PM
-resps %>% 
+As an example, here I sample the posterior over expected occurrences of some effect given causes B and C. That is, sampling  a causal learner with the prior $Beta(3,3)$.  Here we'll do inference with rejection sampling to end up with 1000 simulated responses.
+
+```{r}
+conts <- data.frame(
+  Ctrials = 10,
+  notCtrials = 10,
+  e_C = 8,
+  e_notC = 2
+)
+
+resp_posterior <- webppl(
+  program_file = "webppl/causalLearner.wppl",
+  data = conts,
+  data_var = "dataFromR"
+)
+
+
+resp_posterior %>%
   spread(Parameter, value) %>%
-  mutate(B=as.factor(B),
-         C=as.factor(C)) %>%
-  # group_by(Parameter, value) %>%
-  # summarize(prob = n()/1000)
-  ggplot(aes(x=B, y=C)) + 
+  mutate(
+    B = as.factor(B),
+    C = as.factor(C)
+  ) %>%
+  ggplot(aes(x = B, y = C)) +
   geom_bin2d() +
-  theme(aspect.ratio=1)
-# hist(respSample$value)
+  theme_bw() +
+  theme(aspect.ratio = 1)
+
 ```
 
-So now let's wrap that up in a function to simulate data (this is kind of ugly but it works ok).
+So now let's wrap that up in a function to simulate data (this is kind of ugly but it works ok). Here I simulate data for a "direct" mechanism and an "indirect" mechanism. For instance, rash caused by a cream (direct) versus rash caused by a pill (indirect). I imagine priors for these two approaches can be represented as $Beta(2,5)$ and $Beta(5,2)$. 
+
+Here's are two plots that illustrate these priors
+
+```{r}
+
+plot(seq(0,1,.01), dbeta(seq(0,1,.01), 5.665, 2.93), type = "l")
+title("Direct Mechanism")
+plot(seq(0,1,.01), dbeta(seq(0,1,.01), 2.36, 5.625), type = "l")
+title("Indirect Mechanism")
+```
+
 
 ```{r}
 
@@ -102,7 +109,7 @@ for (i in 1:nrow(cond_data)) {
 }
 ```
 
-So now we have some simulated data. Let's check it out descriptively.
+So now we have some simulated data. Let's take a look at the distributions of responses.
 
 ```{r}
 simulated_data %>%
@@ -114,8 +121,12 @@ simulated_data %>%
 
 Ok, quite clearly we're getting a substantial effect of priors ("mechanism"), and an effect of contingency as well.
 
+# Inferring priors from responses
+
+Now we'll do bayesian data analysis over our bayesian cognitive model, and see if we can recover the parameters of the prior distributions.
+
 ```{r}
-modelFile <- "webppl/causalPriorModelBDA-conts.wppl"
+modelFile <- "webppl/causalPriorModelBDA.wppl"
 
 
 input_data <- simulated_data %>%
@@ -149,20 +160,45 @@ result_indirect <- webppl(
 
 
 ```{r}
-result_direct %>% filter(Parameter=="prior_a") %>% .$value %>% summary()
-result_direct %>% filter(Parameter=="prior_b") %>% .$value %>% summary()
+# result_direct %>% filter(Parameter=="prior_a") %>% .$value %>% summary()
+# result_direct %>% filter(Parameter=="prior_b") %>% .$value %>% summary()
+# 
+# result_indirect %>% filter(Parameter=="prior_a") %>% .$value %>% summary()
+# result_indirect %>% filter(Parameter=="prior_b") %>% .$value %>% summary()
 
-result_indirect %>% filter(Parameter=="prior_a") %>% .$value %>% summary()
-result_indirect %>% filter(Parameter=="prior_b") %>% .$value %>% summary()
-
+result_direct %>%
+  mutate(mechanism = "direct") %>%
+  bind_rows(result_indirect %>% mutate(mechanism="indirect")) %>%
+  spread(Parameter, value) %>%
+  group_by(mechanism) %>%
+  summarize(a_mean = mean(prior_a),
+            b_mean = mean(prior_b))
 ```
 
-We recover the priors pretty damn well! Recall, they were Beta(5, 2), and Beta(2, 5). And this is from (relatively) little data (of course they are very strong priors).
+We recover the parameters pretty well! Recall, they were $Beta(5, 2)$, and $Beta(2, 5)$. And this is from not all that much data (n = 200).
+
+We can also take a peek at the posterior distributions of both parameters, across the two mechanism conditions.
 
 ```{r}
-plot(seq(0,1,.01), dbeta(seq(0,1,.01), 5.665, 2.93), type = "l")
-title("Direct Mechanism: avg prior")
-plot(seq(0,1,.01), dbeta(seq(0,1,.01), 2.36, 5.625), type = "l")
-title("Indirect Mechanism: avg prior")
+result_direct %>%
+  mutate(mechanism = "direct") %>%
+  bind_rows(result_indirect %>% mutate(mechanism="indirect")) %>%
+  spread(Parameter, value) %>%
+  ggplot(aes(x = prior_a, y = prior_b)) +
+  geom_bin2d(bins=20) +
+  facet_wrap(~mechanism, scales="fixed") +
+  # geom_jitter(aes(color = mechanism), width = .1, height=.1, alpha=.33) + # alternate plotting approach
+  coord_cartesian(xlim = c(1,10), ylim = c(1,10)) +
+  theme_bw() +
+  theme(aspect.ratio = 1) +
+  labs(title = "Posterior distribution of causal prior parameters (beta)")
 ```
+
+__To do list ... __
+
+* add cause B responses to BDA model
+* return avg condition predicted responses
+* do both mechanism conditions in one go (separate sets of prior parameters)
+* investigate calculating likelihood, AIC, etc for models/data
+
 
