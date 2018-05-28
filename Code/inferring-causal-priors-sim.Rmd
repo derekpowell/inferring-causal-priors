@@ -30,6 +30,35 @@ Here I assume the causal learner has prior $Beta(3,3)$ over the causal strength 
 
 > "Suppose cause [B/C] occurred alone 10 separate times, how many times would we observe the effect?"
 
+Here's the webppl code for the causal learner.
+
+```javascript
+var contingencies = dataFromR[0]
+
+// a model for causal inference
+var observerModel = function(priors){
+  Infer({
+    method:"rejection", samples:1000,
+
+    model: function() { 
+      var cPower = sample(priors)   
+      var bPower = uniform({a:1,b:1})
+      var causeModel = binomial({n:10, p:cPower+bPower-cPower*bPower})
+      var backgroundModel = binomial({n:10, p:bPower})
+    
+      condition(backgroundModel==contingencies.e_notC)
+      condition(causeModel==contingencies.e_C)  
+      var cGuess = binomial({n:10,p:cPower})
+      var bGuess = binomial({n:10,p:bPower})
+      return {C: cGuess, B: bGuess}
+      }
+    }
+  )
+}
+
+observerModel(Beta({a:3,b:3}))
+```
+
 To get samplse, I do inference on the learner using rejection sampling to end up with 1000 simulated responses. Dividing the response by 10 approximates the causal strength judgment. Here's a heatmap of the posterior causal powers of causes B and C.
 
 ```{r}
@@ -136,6 +165,55 @@ Ok, quite clearly we're getting a substantial effect of priors ("mechanism"), an
 
 Now we'll do bayesian data analysis over our bayesian cognitive model, and see if we can recover the parameters of the prior distributions.
 
+Here's the webppl code for the bayesian data analysis model.
+
+```javascript
+  var a = uniform(1, 10)
+  var b = uniform(1, 10)
+  
+  var priors = DiscretizedBeta({a:a, b:b});
+
+//   Do predictions, map observed responses (following tow model)
+  var predictions = map(function(contingency){
+    return(map(function(mechanism){
+
+      // get data for each condition
+      var condInfo = {
+        contingency: contingency,
+        mechanism: mechanism
+      }
+
+      var condData = _.filter(cmechData, condInfo)
+
+      // get observer's observed contingencies for each condition
+      var contingencies = {
+        Ctrials: condData[0].Ctrials,
+        notCtrials: condData[0].notCtrials,
+        e_C: condData[0].e_C,
+        e_notC: condData[0].e_notC
+      }
+
+      var modelPosterior = observerModel(priors, contingencies);
+
+      // map Ps responses to do BDA
+      map(
+        function(d){
+          observe(modelPosterior, d.response)
+        }, 
+        condData);
+
+      // return avg predicted resp for each cond (not implemented yet)
+      return _.fromPairs([[contingency + "_" + mechanism, expectation(modelPosterior)]])
+
+      }, mechanism_conditions))
+    }, contingency_conditions) 
+
+  //   Return prior parameters
+  return {prior_a:a,prior_b:b};
+
+};
+```
+
 ```{r}
 modelFile <- "webppl/causalPriorModelBDA.wppl"
 
@@ -150,10 +228,10 @@ result_direct <- webppl(
     filter(mechanism=="direct"),
   data_var = "cmechData",
   inference_opts = list(method = "MCMC",
-                        samples = 500,
-                        burn = 100),
+                        samples = 1000,
+                        burn = 500),
   model_var = "bdaModel"
-) # using 500 mcmc samples ... (takes like 5 min?)
+) # (takes like 15 min?)
 
 result_indirect <- webppl(
   program_file = modelFile,
@@ -162,8 +240,8 @@ result_indirect <- webppl(
     filter(mechanism=="indirect"),
   data_var = "cmechData",
   inference_opts = list(method = "MCMC",
-                        samples = 500,
-                        burn = 100),
+                        samples = 1000,
+                        burn = 500),
   model_var = "bdaModel"
 )
 
@@ -191,6 +269,7 @@ result_direct %>%
   spread(Parameter, value) %>%
   ggplot(aes(x = prior_a, y = prior_b)) +
   geom_hex(bins=20) + # or geom_bin2d() 
+  geom_point(data = data.frame(mechanism = c("direct","indirect"), prior_a = c(5,2), prior_b=c(2,5)), color = "red") +
   facet_wrap(~mechanism, scales="fixed") +
   # geom_jitter(aes(color = mechanism), width = .1, height=.1, alpha=.33) + # alternate plotting approach
   coord_cartesian(xlim = c(1,10), ylim = c(1,10)) +

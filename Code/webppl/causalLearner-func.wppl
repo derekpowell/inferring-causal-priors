@@ -1,33 +1,16 @@
-// some causal contingency data
-// var input = {Ctrials: 10,
-//            notCtrials:10,
-//            eGivenC:8,
-//            eGivenNotC:2};
-
 var input = dataFromR[0]
 
-// noisy-or function for counts of occurrences;
-var noisy_or = function(params) {
-    var b = binomial({n:params.n, p:params.bP});
-    var c = b < params.n
-        ? binomial({n:params.n, p:params.cP})
-        : 0;
-
-    return b + c;
-};
-
-// a model for causal inference
+// a model for causal inference + simulating responses
 var observerModel = function(priors){
   Infer({
-    method:"rejection", samples:100, // changed to "enumerate"
+    method:"rejection", samples:100,
 
     model: function() { 
-      // var cPower = sample(priors)
-      // var bPower = sample(DiscretizedUniform())
+
       var cPower = sample(priors)   
-      var bPower = uniform({a:0,b:1})
-      var causeModel = binomial({n:10, p:cPower+bPower-cPower*bPower})
-      var backgroundModel = binomial({n:10, p:bPower})
+      var bPower = uniform(0, 1)
+      var causeModel = binomial({n:input.Ctrials, p:cPower+bPower-cPower*bPower})
+      var backgroundModel = binomial({n:input.notCtrials, p:bPower})
     
       condition(backgroundModel==input.e_notC)
       condition(causeModel==input.e_C)  

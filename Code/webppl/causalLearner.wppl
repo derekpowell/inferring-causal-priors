@@ -14,11 +14,11 @@ var noisy_or = function(params) {
 // a model for causal inference
 var observerModel = function(priors){
   Infer({
-    method:"rejection", samples:1000, // changed to "enumerate"
+    method:"rejection", samples:1000,
 
     model: function() { 
       var cPower = sample(priors)   
-      var bPower = uniform({a:0,b:1})
+      var bPower = uniform(0,1)
       var causeModel = binomial({n:10, p:cPower+bPower-cPower*bPower})
       var backgroundModel = binomial({n:10, p:bPower})
     
