@@ -231,7 +231,7 @@ result_direct <- webppl(
                         samples = 1000,
                         burn = 500),
   model_var = "bdaModel"
-) # (takes like 15 min?)
+) 
 
 result_indirect <- webppl(
   program_file = modelFile,
@@ -244,7 +244,6 @@ result_indirect <- webppl(
                         burn = 500),
   model_var = "bdaModel"
 )
-
 ```
 
 

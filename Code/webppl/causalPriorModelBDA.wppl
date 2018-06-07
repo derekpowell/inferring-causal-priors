@@ -8,25 +8,35 @@ var contingency_conditions = levels(cmechData, "contingency");
 var mechanism_conditions = levels(cmechData, "mechanism");
 
 // a model for observers doing causal inference
-var observerModel = function(priors, conts){ // make this also take contingencies
+var observerModel = cache(function(priors, conts){ // make this also take contingencies
   Infer({
     method:"enumerate", // changed to "enumerate"
 
     model: function() { 
       var cPower = sample(priors)
       var bPower = sample(DiscretizedUniform())
-      var causeModel = binomial({n:conts.Ctrials, p:cPower+bPower-cPower*bPower})
-      var backgroundModel = binomial({n:conts.notCtrials, p:bPower})
-    
-      condition(backgroundModel==conts.e_notC)
-      condition(causeModel==conts.e_C)  
+
+
+      observe(Binomial({n:conts.Ctrials, p:cPower+bPower-cPower*bPower}), conts.e_C)
+      observe(Binomial({n:conts.notCtrials, p:bPower}), conts.e_notC)
+
+      // var causeModel = binomial({n:conts.Ctrials, p:cPower+bPower-cPower*bPower})
+      // condition(causeModel==conts.e_C)  
+
+      // var backgroundModel = binomial({n:conts.notCtrials, p:bPower})
+      // condition(backgroundModel==conts.e_notC)
+      
+
       var cGuess = binomial({n:10, p:cPower})
     
       return cGuess
       }
     }
   )
-}
+}, 10000)
+
+// condition(boolean) <---> factor ( boolean ? 0 : -Infinity )
+// observe(Dist, val) <--> condition ( sample(Dist) == val ) <--> factor(Dist.score(val))
 
 // A bayesian data analysis (BDA) model (bayes in the notebook)
 var bdaModel = function() {
@@ -42,8 +52,13 @@ var bdaModel = function() {
 
   // can also do things directly in terms of a and b
   
-  var a = uniform(1, 10) // 10
-  var b = uniform(1, 10) // 10
+  // var a = uniform(1, 10) // 10
+  // var b = uniform(1, 10) // 10
+  var g = uniformDrift({a: 0, b: 1, width: 0.2});
+  var d = uniformDrift({a: 0, b: 100, width: 20});
+
+  var a = g * d;
+  var b = (1 - g) * d;
 
   // can use discretized versions + enumeration
   // var a = sample(DiscretizedUniform())*10 // 10
@@ -80,6 +95,7 @@ var bdaModel = function() {
       map(
         function(d){
           observe(modelPosterior, d.response)
+          // condition(sample(modelPosterior) == d.response)
         }, 
         condData);
 
