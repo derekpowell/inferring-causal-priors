@@ -2,7 +2,9 @@
 title: "Causal Prior Recovery"
 author: Derek Powell
 date: May 26, 2018
-output: html_notebook
+output: 
+  html_notebook: 
+    code_folding: hide
 ---
 
 Researchers studying causal learning most commonly examine how people learn causal relationships from observing covarations among events. This has borne a lot of fruit and touched on some deep philosophical issues about the nature of causality (e.g., it's all in our heads!). However, little of the causal knowledge that most people actually possess is achieved in this way. Instead, most of our causal knowledge comes from what others tell us about the world. Of course, people rarely convey causal information like, "the causal power of aspirin to reduce headaches is .25." Instead, we communicate more vague information, like "aspirin helps with headaches." Moreover, we communicate and possess even more abstract understandings of how different types of causal entities interact and how different different causal mechanisms operate, that let us draw inferences about specific causal relationships from generalities. How do these forms of knowledge interact in our causal inferences?
@@ -11,7 +13,7 @@ This is a preliminary exploration for a project I'm considering that would exami
 
 This notebook is a preliminary proof-of-concept test to see whether this kind of approach could work. In this notebook, I'll simulate some causal power estimates with a model of a causal learner. I'll simualte data for two different sets of contingency data and with priors for two different contexts. Then, I'll do bayesian data analysis over the bayesian cognitive model and we'll see how well we can recover the original parameters.
 
-```{r}
+```{r, include=FALSE}
 # load packages
 library(rwebppl)
 library(tidyverse)
@@ -99,7 +101,7 @@ plot(seq(0,1,.01), dbeta(seq(0,1,.01), 2.36, 5.625), type = "l")
 title("Indirect Mechanism")
 ```
 
-I'll simulate data for four conditions, two contingency conditions (strong vs weak) where the power of cause C is manipulated, and two mechanism condiitons, where the priors are manipulated. In the experiment, this corresponds to the different cover stories. I'm simulating data for 50 Ps per condition (_n_ = 200 total).
+I'll simulate data for four conditions, two contingency conditions (strong vs weak) where the power of cause C is manipulated, and two mechanism condiitons, where the priors are manipulated. In the experiment, this corresponds to the different cover stories. I'm simulating data for 100 Ps per condition (_n_ = 400 total).
 
 ```{r}
 # this is all pretty ugly but it works
@@ -108,7 +110,7 @@ cond_data <- data.frame(
   mechanism = c("direct", "direct", "indirect", "indirect"),
   Ctrials = c(10,10,10,10),
   notCtrials = c(10,10,10,10),
-  e_C = c(4, 9, 4, 9),
+  e_C = c(4, 8, 4, 8),
   e_notC = c(2,2,2,2)
 ) %>%
   mutate(
@@ -133,7 +135,7 @@ simulate_causal_reasoners <- function(data) {
       e_notC = data$e_notC
     ) %>%
     rename(response = value) %>%
-    filter(Iteration %in% 1:50)
+    filter(Iteration %in% 1:100)
 }
 
 simulated_data = NULL
@@ -168,16 +170,38 @@ Now we'll do bayesian data analysis over our bayesian cognitive model, and see i
 Here's the webppl code for the bayesian data analysis model.
 
 ```javascript
-  var a = uniform(1, 10)
-  var b = uniform(1, 10)
+// A bayesian data analysis (BDA) model (bayes in the notebook)
+var bdaModel = function() {
   
-  var priors = DiscretizedBeta({a:a, b:b});
+  //   set our prior over observers' priors
+  //   here assuming prior is a beta distribution with unknown parameters
 
-//   Do predictions, map observed responses (following tow model)
+  var g1 = uniformDrift({a: 0, b: 1, width: 0.2});
+  var d1 = uniformDrift({a: 0, b: 100, width: 20});
+
+  var a1 = g1 * d1;
+  var b1 = (1 - g1) * d1;
+
+  var g2 = uniformDrift({a: 0, b: 1, width: 0.2});
+  var d2 = uniformDrift({a: 0, b: 100, width: 20});
+
+  var a2 = g2 * d2;
+  var b2 = (1 - g2) * d2;
+
+  
+  // var priors = DiscretizedBeta({a:a, b:b});
+  var priors = {
+  	direct: DiscretizedBeta({a:a1, b:b1}),
+  	indirect: DiscretizedBeta({a:a2, b:b2})
+  };
+
+//   2. do predictions, map observed responses (following tow model)
+
   var predictions = map(function(contingency){
     return(map(function(mechanism){
 
       // get data for each condition
+
       var condInfo = {
         contingency: contingency,
         mechanism: mechanism
@@ -193,98 +217,177 @@ Here's the webppl code for the bayesian data analysis model.
         e_notC: condData[0].e_notC
       }
 
-      var modelPosterior = observerModel(priors, contingencies);
+      var modelPosterior = observerModel(priors[mechanism], contingencies);
 
       // map Ps responses to do BDA
+
       map(
         function(d){
-          observe(modelPosterior, d.response)
+          observe(modelPosterior, {cGuess:d.C, bGuess:d.B})
+          // condition(sample(modelPosterior) == d.response)
         }, 
         condData);
 
-      // return avg predicted resp for each cond (not implemented yet)
-      return _.fromPairs([[contingency + "_" + mechanism, expectation(modelPosterior)]])
+      // return avg predicted resp for each cond)
+      // return _.fromPairs([[contingency + "_" + mechanism, expectation(modelPosterior.cGuess)]])
 
-      }, mechanism_conditions))
-    }, contingency_conditions) 
+    }, mechanism_conditions))
+  }, contingency_conditions) 
 
-  //   Return prior parameters
-  return {prior_a:a,prior_b:b};
+  // TO DO: add code to return avg predicted responses
+
+  //   4. return prior parameters (and add predicted values too?)
+  // return {prior_a:a,prior_b:b, mode:mode, k:k}; // alternate parameterization
+  return {
+  	direct_a:a1,
+  	direct_b:b1,
+  	indirect_a:a2,
+  	indirect_b:b2
+  };
 
 };
 ```
 
 ```{r}
-modelFile <- "webppl/causalPriorModelBDA.wppl"
 
+# new updates do inference for both priors in one bda model and additionally takes B responses into account
+# TAKES ~15 MIN TO RUN!
+
+modelFile <- "webppl/causalPriorModelBDA2.wppl"
 
 input_data <- simulated_data %>%
-  filter(Parameter == "C") 
+  spread(Parameter, response)
 
-result_direct <- webppl(
+result <- webppl(
   program_file = modelFile,
   packages = c("node_modules/discretizedBeta"),
-  data = input_data %>%
-    filter(mechanism=="direct"),
+  data = input_data,
   data_var = "cmechData",
   inference_opts = list(method = "MCMC",
-                        samples = 1000,
-                        burn = 500),
-  model_var = "bdaModel"
-) 
-
-result_indirect <- webppl(
-  program_file = modelFile,
-  packages = c("node_modules/discretizedBeta"),
-  data = input_data %>%
-    filter(mechanism=="indirect"),
-  data_var = "cmechData",
-  inference_opts = list(method = "MCMC",
-                        samples = 1000,
-                        burn = 500),
+                        samples = 5000,
+                        burn = 2500),
   model_var = "bdaModel"
 )
-```
 
+saveRDS(object = result, file = "result.rds")
+```
 
 ```{r}
-result_direct %>%
-  mutate(mechanism = "direct") %>%
-  bind_rows(result_indirect %>% mutate(mechanism="indirect")) %>%
-  spread(Parameter, value) %>%
-  group_by(mechanism) %>%
-  summarize(a_mean = mean(prior_a),
-            b_mean = mean(prior_b))
+result %>%
+  filter(grepl("parameters", Parameter)) %>%
+  group_by(Parameter) %>%
+  summarize(mean = mean(value))
 ```
 
-We recover the parameters pretty well! Recall, they were $Beta(5, 2)$, and $Beta(2, 5)$. And this is from not all that much data (_n_ = 200).
+
+We recover the parameters pretty well! Recall, they were $Beta(5, 2)$, and $Beta(2, 5)$. And this is from not all that much data (_n_ = 400).
 
 We can also take a peek at the posterior distributions of both parameters, across the two mechanism conditions.
 
 ```{r}
-result_direct %>%
-  mutate(mechanism = "direct") %>%
-  bind_rows(result_indirect %>% mutate(mechanism="indirect")) %>%
-  spread(Parameter, value) %>%
-  ggplot(aes(x = prior_a, y = prior_b)) +
+result %>%
+  filter(grepl("parameters", Parameter)) %>%
+  mutate(
+    mechanism = ifelse(grepl("indirect", Parameter), "indirect", "direct"),
+    parameter =  ifelse(grepl("_a", Parameter), "A", "B")
+    ) %>%
+  select(-Parameter) %>%
+  spread(parameter, value) %>%
+  mutate(
+    mu = A/(A+B),
+    prec = A + B
+    ) %>%
+  ggplot(aes(x = mu, y = prec)) +
   geom_hex(bins=20) + # or geom_bin2d() 
-  geom_point(data = data.frame(mechanism = c("direct","indirect"), prior_a = c(5,2), prior_b=c(2,5)), color = "red") +
+  geom_point(data = data.frame(mechanism = c("direct","indirect"), mu = c(5/7,2/7), prec=c(7,7)), color = "red") +
   facet_wrap(~mechanism, scales="fixed") +
   # geom_jitter(aes(color = mechanism), width = .1, height=.1, alpha=.33) + # alternate plotting approach
-  coord_cartesian(xlim = c(1,10), ylim = c(1,10)) +
   theme_bw() +
   theme(aspect.ratio = 1) +
   labs(title = "Posterior distribution of causal prior parameters (beta)")
 ```
 
+## MCMC diagnostics
+
+Here are traceplots for parameters A and B, and in terms of mu and phi.
+
+```{r}
+result %>%
+  filter(grepl("parameters", Parameter)) %>%
+  ggplot(aes(x=Iteration, y = value)) +
+  geom_line() +
+  facet_wrap(~Parameter, scales="free") +
+  theme_bw()
+
+result %>%
+  filter(grepl("parameters", Parameter)) %>%
+  mutate(
+    mechanism = ifelse(grepl("indirect", Parameter), "indirect", "direct"),
+    parameter =  ifelse(grepl("_a", Parameter), "A", "B")
+    ) %>%
+  select(-Parameter) %>%
+  spread(parameter, value) %>%
+  mutate(
+    mu = A/(A+B),
+    prec = A + B
+    ) %>%
+  select(-A, -B) %>%
+  gather(parameter, value, mu, prec) %>%
+  ggplot(aes(x=Iteration, y = value)) +
+  geom_line() +
+  facet_grid(vars(parameter), vars(mechanism),  scales = "free") +
+  theme_bw()
+```
+
+They look reasonably good. Would probably be good to do more iterations though.
+
+## Posterior predictive checks
+
+```{r}
+predictions <- result %>% 
+  filter(grepl("predictives", Parameter)) %>% 
+  group_by(Parameter) %>% 
+  summarize(Mean = mean(value), sd = sd(value)) %>%
+  mutate(
+    type = "predicted",
+    Parameter = gsub("predictives.","", Parameter)
+  ) %>%
+  rename(condition = Parameter)
+    
+
+observed <- input_data %>%
+  unite(condition, contingency, mechanism) %>%
+  group_by(condition) %>%
+  summarize(
+    Mean = mean(C),
+    sd = sd(C)/sqrt(n())
+  ) %>%
+  mutate(type = "observed")
+
+pp <- bind_rows(predictions, observed)
+
+pp %>%
+  select(-sd) %>%
+  spread(type, Mean) %>%
+  ggplot(aes(x=predicted, y = observed)) +
+  geom_point() +
+  geom_abline(slope=1,intercept=0, linetype="dashed", alpha=.35) +
+  theme_bw() +
+  theme(aspect.ratio=1)
+```
+
+Only 4 data points but it gets an essentially perfect fit--as it should, since it's fake data simulated from the true generating process.
+
+## Conclusions
+
 This is exciting and suggests this idea might be feasible and informative. Here I'll throw a bit of water on things, and make a note that another, simpler approach would be to use something like a binned histogram task, ([see Franke et al., 2017 for an exploration](http://www.sfs.uni-tuebingen.de/~mfranke/Papers/FrankeDablander_2016_What_does_the_crowd_believe.pdf)), to directly ask people about their expectations, and then use those priors in a causal learning model to predict participants' responses. However, these are probably complementary techniques, and it's certainly cooler to use bayesian data analysis to uncover the priors inside the task.
 
 __To do list ... __
 
-* add mcmc diagnostics (trace plots, etc)
-* add cause B responses to BDA model
-* return avg condition predicted responses
-* do both mechanism conditions in one go (separate sets of prior parameters)
-* investigate calculating likelihood, AIC, etc for models/data
+* add mcmc diagnostics (trace plots, etc) __DONE__
+* add cause B responses to BDA model _doable, but not ultimately what I want I don't think_
+* return avg condition predicted responses __DONE__
+* do both mechanism conditions in one go (separate sets of prior parameters) __DONE__
+* investigate calculating likelihood, AIC, etc for models/data _can't do it! but can do bayes factors between models_
 
 

@@ -16,20 +16,14 @@ var observerModel = cache(function(priors, conts){ // make this also take contin
       var cPower = sample(priors)
       var bPower = sample(DiscretizedUniform())
 
-
       observe(Binomial({n:conts.Ctrials, p:cPower+bPower-cPower*bPower}), conts.e_C)
       observe(Binomial({n:conts.notCtrials, p:bPower}), conts.e_notC)
 
-      // var causeModel = binomial({n:conts.Ctrials, p:cPower+bPower-cPower*bPower})
-      // condition(causeModel==conts.e_C)  
-
-      // var backgroundModel = binomial({n:conts.notCtrials, p:bPower})
-      // condition(backgroundModel==conts.e_notC)
-      
-
       var cGuess = binomial({n:10, p:cPower})
-    
-      return cGuess
+	  // var bGuess = binomial({n:10, p:bPower})
+
+      // return({cGuess:cGuess, bGuess:bGuess})
+      return(cGuess)
       }
     }
   )
@@ -43,28 +37,25 @@ var bdaModel = function() {
   
   //   set our prior over observers' priors
   //   here assuming prior is a beta distribution with unknown parameters
-  
-  //   specifying the prior over mode and sample size (k) rather than a,b
-  // var mode = uniform(0,1);
-  // var k = uniform(2,20)
-  // var a = mode * (k-2) + 1;
-  // var b = (1-mode) *(k-2) + 1;
 
-  // can also do things directly in terms of a and b
-  
-  // var a = uniform(1, 10) // 10
-  // var b = uniform(1, 10) // 10
-  var g = uniformDrift({a: 0, b: 1, width: 0.2});
-  var d = uniformDrift({a: 0, b: 100, width: 20});
+  var g1 = uniformDrift({a: 0, b: 1, width: 0.2});
+  var d1 = uniformDrift({a: 0, b: 100, width: 20});
 
-  var a = g * d;
-  var b = (1 - g) * d;
+  var a1 = g1 * d1;
+  var b1 = (1 - g1) * d1;
 
-  // can use discretized versions + enumeration
-  // var a = sample(DiscretizedUniform())*10 // 10
-  // var b = sample(DiscretizedUniform())*10 // 10
+  var g2 = uniformDrift({a: 0, b: 1, width: 0.2});
+  var d2 = uniformDrift({a: 0, b: 100, width: 20});
+
+  var a2 = g2 * d2;
+  var b2 = (1 - g2) * d2;
+
   
-  var priors = DiscretizedBeta({a:a, b:b});
+  // var priors = DiscretizedBeta({a:a, b:b});
+  var priors = {
+  	direct: DiscretizedBeta({a:a1, b:b1}),
+  	indirect: DiscretizedBeta({a:a2, b:b2})
+  };
 
 //   2. do predictions, map observed responses (following tow model)
 
@@ -88,13 +79,13 @@ var bdaModel = function() {
         e_notC: condData[0].e_notC
       }
 
-      var modelPosterior = observerModel(priors, contingencies);
+      var modelPosterior = observerModel(priors[mechanism], contingencies);
 
       // map Ps responses to do BDA
 
       map(
         function(d){
-          observe(modelPosterior, d.response)
+          observe(modelPosterior, d.C)
           // condition(sample(modelPosterior) == d.response)
         }, 
         condData);
@@ -109,14 +100,17 @@ var bdaModel = function() {
 
   //   4. return prior parameters (and add predicted values too?)
   // return {prior_a:a,prior_b:b, mode:mode, k:k}; // alternate parameterization
-  return {prior_a:a,prior_b:b};
+  return {
+    parameters: {
+      direct_a:a1,
+      direct_b:b1,
+      indirect_a:a2,
+      indirect_b:b2
+    },
+    predictives: _.fromPairs(map(function(x){
+      _.flatten(_.toPairs(x))
+    }, _.flatten(predictions)))
+  };
 
 };
 
-// Do this in R now
-// var BDAposterior = Infer({method:"MCMC",
-//                           samples:500,
-//                           burn:100}, bdaModel);
-
-
-// BDAposterior
