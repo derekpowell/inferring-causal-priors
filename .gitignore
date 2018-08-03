@@ -40,3 +40,14 @@ rsconnect/
 
 */node_modules/*
 !*/node_modules/discretizedBeta
+
+# Private directories
+/*_private/
+/**/*_private/
+
+# local-only directories
+/*_local/
+/**/*_local/
+
+# script to obscure workerIds and ip addresses
+redact.R
